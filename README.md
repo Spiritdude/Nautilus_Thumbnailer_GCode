@@ -1,6 +1,6 @@
 # Nautilus GCode Thumbnailer
 
-Nautilus aka GNOME Files Browser:
+Nautilus aka GNOME File Browser:
 
 ![](https://raw.githubusercontent.com/Spiritdude/Nautilus_Thumbnailer_GCode/master/imgs/screenshot.png)
 
