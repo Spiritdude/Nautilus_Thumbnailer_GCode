@@ -60,3 +60,6 @@ USAGE gcode2png 0.0.2: [<opts>] <file.gcode> ...
       
 ```
 
+## See Also
+- [STL Thumbnailer](https://github.com/Spiritdude/Nautilus_Thumbnailer_STL)
+
