@@ -17,6 +17,12 @@ install::
 deinstall::
 	sudo rm -f /usr/local/bin/gcode2png /usr/share/thumbnailers/gcode.thumbnailer /usr/share/mime/packages/gcode.xml
 
+tests::
+	cd tests; make 
+
+clean::
+	cd tests; make clean
+
 # -- dev only
 
 edit::
