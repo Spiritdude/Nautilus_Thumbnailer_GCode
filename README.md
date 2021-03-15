@@ -4,6 +4,8 @@ Nautilus aka GNOME File Browser:
 
 ![](https://raw.githubusercontent.com/Spiritdude/Nautilus_Thumbnailer_GCode/master/imgs/screenshot.png)
 
+It supports G-code for 3D printers sliced with Slic3r, Prusa Slicer and Cura.
+
 ## Requirements
 - install PovRay `sudo apt -y install povray` and `(cd ~; ln -s /etc/povray/ .povray)`
 
