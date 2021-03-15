@@ -30,3 +30,5 @@ or also
 % rm -rf ~/.cache/thumbnails/
 ```
 
+![](https://raw.githubusercontent.com/Spiritdude/Nautilus_Thumbnailer_GCode/master/tests/cube.png)
+
