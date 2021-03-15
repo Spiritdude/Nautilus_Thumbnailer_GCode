@@ -4,10 +4,10 @@
 #
 # License: LGPLv3
 #
-# USAGE: gcode2pov test.gcode > gcode.pov
+# USAGE: gcode2png test.gcode 
 # 
 # Description:
-#  Convert G-code to Povray to render into PNG
+#  Convert G-code to PNG (render with Povray)
 #
 # Supported slicers:
 #  - Slic3r
@@ -19,7 +19,7 @@
 use strict;
 
 my $APPNAME = 'gcode2png';
-my $VERSION = '0.0.1';
+my $VERSION = '0.0.2';
 
 my($lx,$ly,$lz,$le,$la,$lb) = (0,0,0,0,0,0);
 my($z,$a,$b) = (0,0,0);
@@ -44,7 +44,7 @@ foreach my $fn (@ARGV) {
    process($fn)
 }
 
-print "$APPNAME $VERSION\n" if($conf->{version}) {
+print "$APPNAME $VERSION\n" if($conf->{version});
 
 sub process {
    my($fn) = @_;
@@ -92,7 +92,7 @@ sub process {
    print $fho "#declare mything = union {\n";
    while(<$fh>) {
       next if(/^\s*;/);
-      if(/^G[01] X([\-\d\.]+) Y([\-\d\.]+)(.*)/) {
+      if(/^G[01].*X([\-\d\.]+) Y([\-\d\.]+)(.*)/) {
          my($x,$y,$r) = ($1,$2,$3);
          $x -= $cx;
          $y -= $cy;
@@ -105,6 +105,7 @@ sub process {
          if($r =~ / E([\-\d\.]+)/ && $1 > 0) {
             $e = $1;
             #print "[ $x,$y,$z,$e ],\n";
+            print $fho "sphere {<$lx,$ly,$lz>,$conf->{nozzle}}\n";
             print $fho "cylinder{<$lx,$ly,$lz>,<$x,$y,$z>,$conf->{nozzle}}\n";
          } else {
          }
@@ -115,13 +116,14 @@ sub process {
          $la = $a;
          $lb = $b;
          
-      } elsif(/^G1 / && /Z([\-\d\.]+)(.*)/) {
+      } elsif(/^G[01] / && /Z([\-\d\.]+)(.*)/) {
          $z = $1;
          $z -= $zmin if($conf->{autolevel});
          $lz = $z;
       }
    }
    print $fho "}\n";
+   print $fho "sphere {<$lx,$ly,$lz>,$conf->{nozzle}}\n";
    print $fho "light_source {
   <-500,-500,400>
   rgb 1
