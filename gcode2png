@@ -1,0 +1,227 @@
+#!/usr/bin/perl
+
+# == Gcode2PNG, written by Rene K. Mueller <spiritdude@gmail.com>
+#
+# License: LGPLv3
+#
+# USAGE: gcode2pov test.gcode > gcode.pov
+# 
+# Description:
+#  Convert G-code to Povray to render into PNG
+#
+# Supported slicers:
+#  - Slic3r
+#  - Prusa-Slicer 
+#
+# History:
+# 2021/03/15: 0.0.1: based on gcode2scad
+
+use strict;
+
+my $APPNAME = 'gcode2png';
+my $VERSION = '0.0.1';
+
+my($lx,$ly,$lz,$le,$la,$lb) = (0,0,0,0,0,0);
+my($z,$a,$b) = (0,0,0);
+my($cx,$cy) = (0,0);
+
+my $conf = {
+   autolevel => 0,
+   nozzle => 0.4,
+   size => '512x512',
+   grid_size => 10,
+   grid => 1,
+   color => '.1,.8,.1',
+   rotate => '30,0,-20',
+   dist => 1.0
+};
+
+help() if(@ARGV==0);
+
+foreach my $fn (@ARGV) {
+   $conf->{$1}++, next if($fn=~/^--(\w+)$/);
+   $conf->{$1} = $2, next if($fn=~/^--(\w+)=(.*)/);
+   process($fn)
+}
+
+print "$APPNAME $VERSION\n" if($conf->{version}) {
+
+sub process {
+   my($fn) = @_;
+
+   my($rx,$ry,$rz) = split(/,/,$conf->{rotate});
+   my($w,$h) = split(/x/,$conf->{size});
+   $w = 512 unless($w);
+   $h = $w unless($h);
+   my $ds = $w>$h ? $w/$h : $h/$w;
+   my $gs = $conf->{grid_size} || 10;
+   
+   $ds *= $conf->{dist};
+
+   my($zmin,$zmax) = (1e38,-1e38);        # -- pre-read G-code to find zmin
+   if($conf->{autolevel}) {
+      open(my $fh,"<",$fn);
+      while(<$fh>) {
+         next if(/^\s*;/);
+         if(/ Z([\-\d\.]+)/) {
+            my $z = $1;
+            $zmin = $z if($zmin>$z);
+            $zmax = $z if($zmax<$z);
+         }
+      }
+      close $fh;
+   }
+   if($conf->{autolevel} && $zmin==1e38) {
+      print STDERR "$APPNAME ERROR: zmin not determined, likely empty or non-existing gcode\n";
+      exit -1;
+   }
+   
+   my $tmp = "/tmp/gcode2png-$$.pov";
+   my $out = $fn;
+   $out =~ s/\.gcode$/.png/i;
+   $out = $conf->{output} if(defined $conf->{output});
+   open(my $fho,">",$tmp);
+   open(my $fh,"<",$fn);
+   print $fho "// created by $APPNAME $VERSION, ".scalar localtime()." from $fn\n";
+   print $fho "#include \"math.inc\"
+#include \"finish.inc\"
+#include \"transforms.inc\"
+#include \"functions.inc\"
+   
+";   
+   print $fho "#declare mything = union {\n";
+   while(<$fh>) {
+      next if(/^\s*;/);
+      if(/^G[01] X([\-\d\.]+) Y([\-\d\.]+)(.*)/) {
+         my($x,$y,$r) = ($1,$2,$3);
+         $x -= $cx;
+         $y -= $cy;
+         my($d) = sqrt(($x-$lx)*($x-$lx)+($y-$ly)*($y-$ly)+($z-$lz)*($z-$lz));
+         my $e = 0;
+         $z = $1 if($r =~ / Z([\-\d\.]+)/);
+         $z -= $zmin if($conf->{autolevel});
+         $a = $1 if(1 && $r =~ / A([\-\d\.]+)/);
+         $b = $1 if(1 && $r =~ / B([\-\d\.]+)/);
+         if($r =~ / E([\-\d\.]+)/ && $1 > 0) {
+            $e = $1;
+            #print "[ $x,$y,$z,$e ],\n";
+            print $fho "cylinder{<$lx,$ly,$lz>,<$x,$y,$z>,$conf->{nozzle}}\n";
+         } else {
+         }
+         $lx = $x;
+         $ly = $y;
+         $lz = $z;
+         $le = $e;
+         $la = $a;
+         $lb = $b;
+         
+      } elsif(/^G1 / && /Z([\-\d\.]+)(.*)/) {
+         $z = $1;
+         $z -= $zmin if($conf->{autolevel});
+         $lz = $z;
+      }
+   }
+   print $fho "}\n";
+   print $fho "light_source {
+  <-500,-500,400>
+  rgb 1
+  //shadowless
+  parallel
+  //area_light <5,0,0> <0,0,5> 40,40 adaptive 0 jitter
+} 
+light_source {
+  <-100,500,0>
+  rgb 1
+  //shadowless
+  parallel
+} 
+global_settings {
+  assumed_gamma 2
+} 
+#declare Min = min_extent(mything);
+#declare Max = max_extent(mything);
+#declare bottom_diag = sqrt(pow(Max.y - Min.y, 2) + pow(Max.x - Min.x, 2));
+#debug concat(\"bottom_diag:\", str(bottom_diag, 5, 0))
+#declare box_diag = sqrt(pow(bottom_diag, 2) + pow(Max.z - Min.z, 2));
+#debug concat(\"box_diag:\", str(box_diag, 5, 0))
+
+camera {
+  location <0,box_diag*2*$ds,0> 
+  rotate <$rx,$ry,$rz+180>
+  //rotate <0,0,180>
+  up z
+  angle 30
+  look_at <0,0,0>
+  right x*$w/$h
+}
+
+object {
+  mything
+  Center_Trans(mything, x+y+z)   
+  //rotate <$rx,$ry,$rz>  // rather rotate camera
+  texture {
+    pigment { color <$conf->{color}> }
+    finish { phong 0.8 diffuse 0.8 ambient 0.25 reflection {0.003, 0.005} specular 0.2 }
+  }
+  no_shadow
+}";
+   print $fho "#macro Raster(RScale, RLine)
+pigment{
+   gradient x scale RScale
+   color_map{
+     [0.000   color rgb<1,1,1>*.5]
+     [0+RLine color rgb<1,1,1>*.5]
+     [0+RLine color rgbt<1,1,1,1>]
+     [1-RLine color rgbt<1,1,1,1>]
+     [1-RLine color rgb<1,1,1>*.5]
+     [1.000   color rgb<1,1,1>*.5]
+   }
+} // end of pigment
+#end
+
+#macro Grid(RasterScale, RasterHalfLine, Background_pigment)
+plane{<0,1,0>, -(Max.z-Min.z)/2
+      texture{ Background_pigment } //  base color
+      texture{ Raster(RasterScale, RasterHalfLine) }                // 2nd layer
+      texture{ Raster(RasterScale, RasterHalfLine) rotate<0,90,0> } // 3rd layer
+      texture{ Raster(RasterScale*0.1, RasterHalfLine*2) }            // fine-grained 4st layer
+      texture{ Raster(RasterScale*0.1, RasterHalfLine*2) rotate<0,90,0> } // fine-grained 5th layer
+     } // end of plane
+#end
+
+object { Grid($gs,0.01,pigment{color rgb<1,1,1,1>*2}) rotate <90,0,0> }
+" if($conf->{grid});
+
+   close $fh;
+
+   if(fork()==0) {
+      close STDOUT;
+      close STDERR;
+      exec("povray","-d","-v","-i$tmp","+FN","+W$w","+H$h","-o\"$out\"","+Q11","+AM1","+A","+UA","+R5");
+   }
+   wait;
+   my $err = $? >> 8;
+   unlink $tmp;
+}
+
+sub help() {
+   print "USAGE $APPNAME $VERSION: [<opts>] <file.gcode> ... 
+   options:
+      --version               print version and exit
+      --autolevel             level Z minimum to 0 (default: off)
+      --output=<fn>           override .gcode -> .png conversion
+      --rotate=<x>,<y>,<z>    rotate model (default: $conf->{rotate})
+      --dist=<d>              set distance multiplier (default: $conf->{dist})
+      --color=<r>,<g>,<b>     set color (default: $conf->{color})
+      --grid=0 or 1           set grid (default: $conf->{grid})
+      --grid_size=<s>         set grid size (default: $conf->{grid_size})
+      --nozzle=<d>            set nozzle diameter (default: $conf->{nozzle})
+      
+   examples:
+      ./gcode2png gcube.gcode
+      ./gcode2png --output=cube-normal.png cube.gcode
+      
+";   
+   exit 0;
+}
+

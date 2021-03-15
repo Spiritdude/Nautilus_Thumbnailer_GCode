@@ -1,0 +1,3 @@
+[Thumbnailer Entry]
+Exec=/usr/local/bin/gcode2png --output=%o --size=%s %i
+MimeType=text/x.gcode
