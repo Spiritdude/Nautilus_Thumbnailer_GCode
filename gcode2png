@@ -221,8 +221,8 @@ sub help() {
       --nozzle=<d>            set nozzle diameter (default: $conf->{nozzle})
       
    examples:
-      ./gcode2png gcube.gcode
-      ./gcode2png --output=cube-normal.png cube.gcode
+      gcode2png gcube.gcode
+      gcode2png --output=cube-normal.png cube.gcode
       
 ";   
    exit 0;
