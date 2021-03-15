@@ -213,6 +213,7 @@ sub help() {
       --version               print version and exit
       --autolevel             level Z minimum to 0 (default: off)
       --output=<fn>           override .gcode -> .png conversion
+      --size=<w>x<h>          set size of image (default: $conf->{size})
       --rotate=<x>,<y>,<z>    rotate model (default: $conf->{rotate})
       --dist=<d>              set distance multiplier (default: $conf->{dist})
       --color=<r>,<g>,<b>     set color (default: $conf->{color})
