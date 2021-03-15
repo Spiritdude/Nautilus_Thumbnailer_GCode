@@ -29,7 +29,7 @@ edit::
 	dee4 gcode2png Makefile README.md
 
 push::
-	git push
+	git push -u origin master
 
 pull::
 	git pull
