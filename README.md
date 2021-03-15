@@ -30,7 +30,7 @@ or also
 % rm -rf ~/.cache/thumbnails/
 ```
 
-## Gcode2png
+## gcode2png
 You may use it also manually:
 ```
 % gcode2png cube.gcode
