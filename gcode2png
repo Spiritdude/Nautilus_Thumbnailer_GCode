@@ -12,8 +12,10 @@
 # Supported slicers:
 #  - Slic3r
 #  - Prusa-Slicer 
+#  - Cura
 #
 # History:
+# 2021/03/16: 0.0.3: opts and files pre-processed, temp file removed (was disabled)
 # 2021/03/15: 0.0.1: based on gcode2scad
 
 use strict;
