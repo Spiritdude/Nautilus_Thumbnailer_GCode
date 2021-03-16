@@ -1,5 +1,5 @@
 APPNAME = Nautilus_Thumbnailer_GCode
-VERSION = 0.0.3
+VERSION = 0.0.4
 
 all::
 	@echo "make install deinstall test edit push pull change backup"
