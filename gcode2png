@@ -75,8 +75,8 @@ sub process {
    if(defined $conf->{complete} || $conf->{autolevel}) {
       open(my $fh,"<",$fn);
       while(<$fh>) {
-         $tot_ln++;
          next if(/^\s*;/);
+         $tot_ln++;
          if(/ Z([\-\d\.]+)/) {
             my $z = $1;
             $zmin = $z if($zmin>$z);
@@ -106,9 +106,9 @@ sub process {
    my $ra = $conf->{nozzle} / 2;
    print $fho "#declare mything = union {\n";
    while(<$fh>) {
+      next if(/^\s*;/);
       last if(defined $conf->{complete} && $ln > $conf->{complete}*$tot_ln);
       $ln++;
-      next if(/^\s*;/);
       if(/^G[01].*X([\-\d\.]+) Y([\-\d\.]+)(.*)/) {
          my($x,$y,$r) = ($1,$2,$3);
          $x -= $cx;
