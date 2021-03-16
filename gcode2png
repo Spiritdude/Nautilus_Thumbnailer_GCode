@@ -204,7 +204,7 @@ object { Grid($gs,0.01,pigment{color rgb<1,1,1,1>*2}) rotate <90,0,0> }
    wait;
    my $err = $? >> 8;
    print "$APPNAME: ERROR: $err in povray, abort\n" if($err);
-   #unlink $tmp;
+   unlink $tmp;
 }
 
 sub help() {
