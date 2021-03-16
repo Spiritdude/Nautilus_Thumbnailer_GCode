@@ -41,7 +41,7 @@ You may use it also manually:
 ![](https://raw.githubusercontent.com/Spiritdude/Nautilus_Thumbnailer_GCode/master/imgs/cube.png)
 
 ```
-USAGE gcode2png 0.0.4: [<opts>] <file.gcode> ...
+USAGE gcode2png 0.0.5: [<opts>] <file.gcode> ... 
    options:
       --version               print version and exit
       --autolevel             level Z minimum to 0 (default: off)
@@ -53,11 +53,13 @@ USAGE gcode2png 0.0.4: [<opts>] <file.gcode> ...
       --grid=0 or 1           set grid (default: 1)
       --grid_size=<s>         set grid size (default: 10)
       --nozzle=<d>            set nozzle diameter (default: 0.4)
-
+      --complete=<i>          set completeness: 0..1 or 0%..100%
+      
    examples:
       gcode2png gcube.gcode
       gcode2png --output=cube-normal.png cube.gcode
       gcode2png --color=1,0,0 3DBenchy.gcode
+      gcode2png --complete=50% 3DBenchy.gcode
       
 ```
 
