@@ -21,7 +21,7 @@
 use strict;
 
 my $APPNAME = 'gcode2png';
-my $VERSION = '0.0.5';
+my $VERSION = '0.0.4';
 
 my($lx,$ly,$lz,$le,$la,$lb) = (0,0,0,0,0,0);
 my($z,$a,$b) = (0,0,0);
@@ -48,8 +48,6 @@ foreach(@ARGV) {        # -- preprocess all arguments first
    push(@fs,$_);
 }
 
-$conf->{complete} = $conf->{complete} * 1 / 100.0 if(defined $conf->{complete} && $conf->{complete}=~/%/);
-
 foreach my $fn (@fs) {
    process($fn);
 }
@@ -67,14 +65,11 @@ sub process {
    my $gs = $conf->{grid_size} || 10;
    
    $ds *= $conf->{dist};
-   my $tot_ln = 0;
-   my $ln = 0;
-   
+
    my($zmin,$zmax) = (1e38,-1e38);        # -- pre-read G-code to find zmin
-   if(defined $conf->{complete} || $conf->{autolevel}) {
+   if($conf->{autolevel}) {
       open(my $fh,"<",$fn);
       while(<$fh>) {
-         $tot_ln++;
          next if(/^\s*;/);
          if(/ Z([\-\d\.]+)/) {
             my $z = $1;
@@ -105,8 +100,6 @@ sub process {
    my $ra = $conf->{nozzle} / 2;
    print $fho "#declare mything = union {\n";
    while(<$fh>) {
-      last if(defined $conf->{complete} && $ln > $conf->{complete}*$tot_ln);
-      $ln++;
       next if(/^\s*;/);
       if(/^G[01].*X([\-\d\.]+) Y([\-\d\.]+)(.*)/) {
          my($x,$y,$r) = ($1,$2,$3);
@@ -138,8 +131,8 @@ sub process {
          $lz = $z;
       }
    }
-   print $fho "sphere {<$lx,$ly,$lz>,$ra}\n";
    print $fho "}\n";
+   print $fho "sphere {<$lx,$ly,$lz>,$conf->{nozzle}}\n";
    print $fho "light_source {
   <-500,-500,400>
   rgb 1
@@ -236,13 +229,11 @@ sub help() {
       --grid=0 or 1           set grid (default: $conf->{grid})
       --grid_size=<s>         set grid size (default: $conf->{grid_size})
       --nozzle=<d>            set nozzle diameter (default: $conf->{nozzle})
-      --complete=<i>          set completeness: 0..1 or 0%..100%
       
    examples:
       gcode2png gcube.gcode
       gcode2png --output=cube-normal.png cube.gcode
       gcode2png --color=1,0,0 3DBenchy.gcode
-      gcode2png --complete=50% 3DBenchy.gcode
       
 ";   
    exit 0;
