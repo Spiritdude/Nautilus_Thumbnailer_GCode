@@ -41,7 +41,7 @@ You may use it also manually:
 ![](https://raw.githubusercontent.com/Spiritdude/Nautilus_Thumbnailer_GCode/master/imgs/cube.png)
 
 ```
-USAGE gcode2png 0.0.2: [<opts>] <file.gcode> ...
+USAGE gcode2png 0.0.4: [<opts>] <file.gcode> ...
    options:
       --version               print version and exit
       --autolevel             level Z minimum to 0 (default: off)
