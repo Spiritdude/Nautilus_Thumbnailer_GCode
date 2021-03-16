@@ -57,8 +57,11 @@ USAGE gcode2png 0.0.2: [<opts>] <file.gcode> ...
    examples:
       gcode2png gcube.gcode
       gcode2png --output=cube-normal.png cube.gcode
+      gcode2png --color=1,0,0 3DBenchy.gcode
       
 ```
+
+![](https://raw.githubusercontent.com/Spiritdude/Nautilus_Thumbnailer_GCode/master/imgs/3DBenchy.png)
 
 ## See Also
 - [STL Thumbnailer](https://github.com/Spiritdude/Nautilus_Thumbnailer_STL)

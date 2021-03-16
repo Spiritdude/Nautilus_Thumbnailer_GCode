@@ -19,7 +19,7 @@
 use strict;
 
 my $APPNAME = 'gcode2png';
-my $VERSION = '0.0.2';
+my $VERSION = '0.0.3';
 
 my($lx,$ly,$lz,$le,$la,$lb) = (0,0,0,0,0,0);
 my($z,$a,$b) = (0,0,0);
@@ -38,10 +38,16 @@ my $conf = {
 
 help() if(@ARGV==0);
 
-foreach my $fn (@ARGV) {
-   $conf->{$1}++, next if($fn=~/^--(\w+)$/);
-   $conf->{$1} = $2, next if($fn=~/^--(\w+)=(.*)/);
-   process($fn)
+my(@fs);
+
+foreach(@ARGV) {        # -- preprocess all arguments first
+   $conf->{$1}++, next if(/^--(\w+)$/);
+   $conf->{$1} = $2, next if(/^--(\w+)=(.*)/);
+   push(@fs,$_);
+}
+
+foreach my $fn (@fs) {
+   process($fn);
 }
 
 print "$APPNAME $VERSION\n" if($conf->{version});
@@ -224,6 +230,7 @@ sub help() {
    examples:
       gcode2png gcube.gcode
       gcode2png --output=cube-normal.png cube.gcode
+      gcode2png --color=1,0,0 3DBenchy.gcode
       
 ";   
    exit 0;
