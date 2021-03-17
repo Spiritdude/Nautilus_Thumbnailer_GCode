@@ -15,6 +15,7 @@
 #  - Cura
 #
 # History:
+# 2021/03/17: 0.0.6: better parsing of extrusion (in-place purging)
 # 2021/03/16: 0.0.5: --complete=0..1 or 0%..100% added for partial G-code view
 # 2021/03/16: 0.0.3: opts and files pre-processed, temp file removed (was disabled)
 # 2021/03/15: 0.0.1: based on gcode2scad
@@ -22,11 +23,7 @@
 use strict;
 
 my $APPNAME = 'gcode2png';
-my $VERSION = '0.0.5';
-
-my($lx,$ly,$lz,$le,$la,$lb) = (0,0,0,0,0,0);
-my($z,$a,$b) = (0,0,0);
-my($cx,$cy) = (0,0);
+my $VERSION = '0.0.6';
 
 my $conf = {
    autolevel => 0,
@@ -60,6 +57,10 @@ print "$APPNAME $VERSION\n" if($conf->{version});
 sub process {
    my($fn) = @_;
 
+   my($lx,$ly,$lz,$le,$la,$lb) = (0,0,0,0,0,0);
+   my($x,$y,$z,$e,$a,$b) = (0,0,0,0,0);
+   my($cx,$cy) = (0,0);
+
    my($rx,$ry,$rz) = split(/,/,$conf->{rotate});
    my($w,$h) = split(/x/,$conf->{size});
    $w = 512 unless($w);
@@ -67,9 +68,10 @@ sub process {
    my $ds = $w>$h ? $w/$h : $h/$w;
    my $gs = $conf->{grid_size} || 10;
    
-   $ds *= $conf->{dist};
    my $tot_ln = 0;
    my $ln = 0;
+
+   $ds *= $conf->{dist};
    
    my($zmin,$zmax) = (1e38,-1e38);        # -- pre-read G-code to find zmin
    if(defined $conf->{complete} || $conf->{autolevel}) {
@@ -92,8 +94,10 @@ sub process {
    
    my $tmp = "/tmp/gcode2png-$$.pov";
    my $out = $fn;
+
    $out =~ s/\.gcode$/.png/i;
    $out = $conf->{output} if(defined $conf->{output});
+
    open(my $fho,">",$tmp);
    open(my $fh,"<",$fn);
    print $fho "// created by $APPNAME $VERSION, ".scalar localtime()." from $fn\n";
@@ -109,22 +113,20 @@ sub process {
       next if(/^\s*;/);
       last if(defined $conf->{complete} && $ln > $conf->{complete}*$tot_ln);
       $ln++;
-      if(/^G[01].*X([\-\d\.]+) Y([\-\d\.]+)(.*)/) {
-         my($x,$y,$r) = ($1,$2,$3);
-         $x -= $cx;
-         $y -= $cy;
+      if(/^G[01] /) {
+         $x = $1 - $cx if(/ X([\-\d\.]+)/);
+         $y = $1 - $cy if(/ Y([\-\d\.]+)/);
+         $z = $1 - ($conf->{autolevel} ? $zmin : 0) if(/ Z([\-\d\.]+)/);
+         $a = $1 if(1 && / A([\-\d\.]+)/);
+         $b = $1 if(1 && / B([\-\d\.]+)/);
+
          my($d) = sqrt(($x-$lx)*($x-$lx)+($y-$ly)*($y-$ly)+($z-$lz)*($z-$lz));
-         my $e = 0;
-         $z = $1 if($r =~ / Z([\-\d\.]+)/);
-         $z -= $zmin if($conf->{autolevel});
-         $a = $1 if(1 && $r =~ / A([\-\d\.]+)/);
-         $b = $1 if(1 && $r =~ / B([\-\d\.]+)/);
-         if($r =~ / E([\-\d\.]+)/ && $1 > 0) {
+         if(/ E([\-\d\.]+)/) {         # -- extrusion?
             $e = $1;
-            #print "[ $x,$y,$z,$e ],\n";
-            print $fho "sphere {<$lx,$ly,$lz>,$ra}\n";
-            print $fho "cylinder{<$lx,$ly,$lz>,<$x,$y,$z>,$ra}\n" if($lx!=$x||$ly!=$y||$lz!=$z);
-         } else {
+            if($e > $le && $d > 0) {   # -- positive extrusin and actual X/Y motion (not just purging in-place)
+               print $fho "sphere {<$lx,$ly,$lz>,$ra}\n";
+               print $fho "cylinder{<$lx,$ly,$lz>,<$x,$y,$z>,$ra}\n" if($lx!=$x||$ly!=$y||$lz!=$z);
+            }
          }
          $lx = $x;
          $ly = $y;
@@ -132,11 +134,6 @@ sub process {
          $le = $e;
          $la = $a;
          $lb = $b;
-         
-      } elsif(/^G[01] / && /Z([\-\d\.]+)(.*)/) {
-         $z = $1;
-         $z -= $zmin if($conf->{autolevel});
-         $lz = $z;
       }
    }
    print $fho "sphere {<$lx,$ly,$lz>,$ra}\n";

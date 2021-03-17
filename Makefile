@@ -1,5 +1,5 @@
 APPNAME = Nautilus_Thumbnailer_GCode
-VERSION = 0.0.5
+VERSION = 0.0.6
 
 all::
 	@echo "make install deinstall test edit push pull change backup"
@@ -26,7 +26,7 @@ clean::
 # -- dev only
 
 edit::
-	dee4 gcode2png Makefile README.md
+	dee4 gcode2png Makefile README.md tests/Makefile
 
 push::
 	git push -u origin master
