@@ -134,7 +134,8 @@ sub process {
          $le = $e;
          $la = $a;
          $lb = $b;
-      } elsif(/^G92 E0/) {
+
+      } elsif(/^G92 E0/) {    # -- track reset of extrusion measurement
          $le = 0;
       }
    }
