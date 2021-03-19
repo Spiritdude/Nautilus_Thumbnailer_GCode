@@ -134,6 +134,8 @@ sub process {
          $le = $e;
          $la = $a;
          $lb = $b;
+      } elsif(/^G92 E0/) {
+         $le = 0;
       }
    }
    print $fho "sphere {<$lx,$ly,$lz>,$ra}\n";
