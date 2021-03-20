@@ -57,6 +57,10 @@ print "$APPNAME $VERSION\n" if($conf->{version});
 sub process {
    my($fn) = @_;
 
+   if(!-e $fn) {
+      print "$APPNAME ERROR: $fn doesn't exist.\n";
+      exit -1;
+   }
    my($lx,$ly,$lz,$le,$la,$lb) = (0,0,0,0,0,0);
    my($x,$y,$z,$e,$a,$b) = (0,0,0,0,0);
    my($cx,$cy) = (0,0);
