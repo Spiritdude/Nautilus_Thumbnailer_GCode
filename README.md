@@ -41,7 +41,7 @@ You may use it also manually:
 ![](https://raw.githubusercontent.com/Spiritdude/Nautilus_Thumbnailer_GCode/master/imgs/cube.png)
 
 ```
-USAGE gcode2png 0.0.5: [<opts>] <file.gcode> ... 
+USAGE gcode2png 0.1.0: [<opts>] <file.gcode> ... 
    options:
       --version               print version and exit
       --autolevel             level Z minimum to 0 (default: off)
@@ -54,6 +54,7 @@ USAGE gcode2png 0.0.5: [<opts>] <file.gcode> ...
       --grid_size=<s>         set grid size (default: 10)
       --nozzle=<d>            set nozzle diameter (default: 0.4)
       --complete=<i>          set completeness: 0..1 or 0%..100%
+      --timeout=<s>           set timeout of povray (default: 90)
       
    examples:
       gcode2png gcube.gcode
