@@ -15,6 +15,7 @@
 #  - Cura
 #
 # History:
+# 2022/01/28: 0.1.1: supporting G2/G3 arc extrusions
 # 2021/03/27: 0.1.0: povray timeouts after 90s, --timeout=120 changes it
 # 2021/03/17: 0.0.6: better parsing of extrusion (in-place purging)
 # 2021/03/16: 0.0.5: --complete=0..1 or 0%..100% added for partial G-code view
@@ -22,9 +23,10 @@
 # 2021/03/15: 0.0.1: based on gcode2scad
 
 use strict;
+use Math::Trig;
 
 my $APPNAME = 'gcode2png';
-my $VERSION = '0.1.0';
+my $VERSION = '0.1.1';
 
 my $conf = {
    autolevel => 0,
@@ -66,6 +68,7 @@ sub process {
    my($lx,$ly,$lz,$le,$la,$lb) = (0,0,0,0,0,0);
    my($lxe,$lye,$lze) = (0,0,0);
    my($x,$y,$z,$e,$a,$b) = (0,0,0,0,0);
+   my($i,$j) = (0,0);
    my($cx,$cy) = (0,0);
 
    my($rx,$ry,$rz) = split(/,/,$conf->{rotate});
@@ -130,7 +133,7 @@ sub process {
          my($d) = sqrt(($x-$lx)*($x-$lx)+($y-$ly)*($y-$ly)+($z-$lz)*($z-$lz));
          if(/ E([\-\d\.]+)/) {         # -- extrusion?
             $e = $1;
-            if($e > $le && $d > 0) {   # -- positive extrusin and actual X/Y motion (not just purging in-place)
+            if($e > $le && $d > 0) {   # -- positive extrusion and actual X/Y motion (not just purging in-place)
                print $fho "sphere {<$lx,$ly,$lz>,$ra}\n";
                print $fho "cylinder{<$lx,$ly,$lz>,<$x,$y,$z>,$ra}\n" if($lx!=$x||$ly!=$y||$lz!=$z);
                $lxe = $x;
@@ -145,6 +148,84 @@ sub process {
          $la = $a;
          $lb = $b;
 
+      } elsif(/^G([23]) /) {
+         my $dir = $1 eq '2' ? -1 : 1;    # -- angle-wise
+         $x = $1 - $cx if(/ X([\-\d\.]+)/);
+         $y = $1 - $cy if(/ Y([\-\d\.]+)/);
+         $z = $1 - ($conf->{autolevel} ? $zmin : 0) if(/ Z([\-\d\.]+)/);
+         $a = $1 if(1 && / A([\-\d\.]+)/);
+         $b = $1 if(1 && / B([\-\d\.]+)/);
+         $i = $1 if(/ I([\-\d\.]+)/);
+         $j = $1 if(/ J([\-\d\.]+)/);
+   
+         my $xp = $lx + $i;
+         my $yp = $ly + $j;
+         my $x_ = $x;
+         my $y_ = $y;
+         #my($d) = sqrt(($x-$lx)*($x-$lx)+($y-$ly)*($y-$ly)+($z-$lz)*($z-$lz));
+
+         if(/ E([\-\d\.]+)/) {         # -- extrusion?
+            $e = $1;
+            if($e > $le) {   # -- positive extrusion and actual X/Y motion (not just purging in-place)
+               my $as = atan2(-$j,-$i);
+               my $ae = atan2($y-$yp,$x-$xp);
+               my $da = sqrt($i**2 + $j**2);
+
+               my $s = .3;    
+               my $al;
+               
+               if($dir > 0) {
+                  # -- ccw (a++)
+                  $as = $as > $ae ? $as - 2*pi() : $as;
+                  $al = abs($ae - $as) * $dir;
+               } else {
+                  # -- cw (a--)
+                  $as = $as<0 ? 2*pi() + $as : $as;
+                  $al = abs($as - $ae) * $dir;
+               }
+               my $n = int(abs($al)*$da/$s);
+               #print("$lx,$ly,$lz -> $x,$y,$z ($i,$j), d=$da, n=$n ($dir), al=$al\n");
+
+               #print $fho "sphere {<$lx,$ly,$lz>,$ra}\n";
+
+               for($i=1; $i<=$n; $i++) {
+                  my $f = $i/$n;
+                  my $a = $as + $al*$f;
+
+                  $x = $xp + cos($a) * $da;
+                  $y = $yp + sin($a) * $da;
+                  $z = $lz;
+
+                  #print("   $x,$y,$z ($i of $n)\n");
+                  #print "$lx,$ly,$lz -> $x_,$y_,$z_ ($ra)\n";
+
+                  print $fho "sphere {<$lx,$ly,$lz>,$ra}\n";
+                  print $fho "cylinder{<$lx,$ly,$lz>,<$x,$y,$z>,$ra}\n" if($lx!=$x||$ly!=$y||$lz!=$z);
+                  
+                  $lx = $x;
+                  $ly = $y;
+                  $lz = $z;
+               }
+               $lx = $x;
+               $ly = $y;
+               $lz = $z;
+               #$lx = $x_;
+               #$ly = $y_;
+               #print($lx-$x_," ",$ly-$y_,"\n");
+               #print sprintf("\tERROR: x=%.2f%% y=%.2f%%\n",100-100/$lx*$x_,100-100/$ly*$y_) if(abs($lx-$x_)+abs($ly-$y_)>0.1);
+               #print $fho "sphere {<$lx,$ly,$lz>,$ra}\n";
+               $lxe = $lx;
+               $lye = $ly;
+               $lze = $lz;
+            }
+         }
+         $lx = $x;
+         $ly = $y;
+         $lz = $z;
+         $le = $e;
+         $la = $a;
+         $lb = $b;
+      
       } elsif(/^G92 E0/) {    # -- track reset of extrusion measurement
          $le = 0;
       }
