@@ -166,12 +166,12 @@ sub process {
 
          if(/ E([\-\d\.]+)/) {         # -- extrusion?
             $e = $1;
-            if($e > $le) {   # -- positive extrusion and actual X/Y motion (not just purging in-place)
+            if($e > $le) {             # -- positive extrusion and actual X/Y motion (not just purging in-place)
                my $as = atan2(-$j,-$i);
                my $ae = atan2($y-$yp,$x-$xp);
                my $da = sqrt($i**2 + $j**2);
 
-               my $s = .3;    
+               my $s = .5;             # -- segment length
                my $al;
                
                if($dir > 0) {
@@ -180,7 +180,7 @@ sub process {
                   $al = abs($ae - $as) * $dir;
                } else {
                   # -- cw (a--)
-                  $as = $as<0 ? 2*pi() + $as : $as;
+                  $as = $as < $ae ? $as + 2*pi() : $as;
                   $al = abs($as - $ae) * $dir;
                }
                my $n = int(abs($al)*$da/$s);
