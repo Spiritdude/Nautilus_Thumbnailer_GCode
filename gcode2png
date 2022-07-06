@@ -15,6 +15,7 @@
 #  - Cura
 #
 # History:
+# 2022/02/27: 0.1.2: supporting --even or --odd for changing layer color, must have G-code "LAYER: \d+" present
 # 2022/01/28: 0.1.1: supporting G2/G3 arc extrusions
 # 2021/03/27: 0.1.0: povray timeouts after 90s, --timeout=120 changes it
 # 2021/03/17: 0.0.6: better parsing of extrusion (in-place purging)
@@ -26,7 +27,7 @@ use strict;
 use Math::Trig;
 
 my $APPNAME = 'gcode2png';
-my $VERSION = '0.1.1';
+my $VERSION = '0.1.2';
 
 my $conf = {
    autolevel => 0,
@@ -79,15 +80,16 @@ sub process {
    my $gs = $conf->{grid_size} || 10;
    
    my $tot_ln = 0;
-   my $ln = 0;
-
+   my $ln = 0;          # -- gcode line
+   my $lyn = 0;         # -- layer no
+   
    $ds *= $conf->{dist};
    
    my($zmin,$zmax) = (1e38,-1e38);        # -- pre-read G-code to find zmin
    if(defined $conf->{complete} || $conf->{autolevel}) {
       open(my $fh,"<",$fn);
       while(<$fh>) {
-         next if(/^\s*;/);
+         #next if(/^\s*;/);
          $tot_ln++;
          if(/ Z([\-\d\.]+)/) {
             my $z = $1;
@@ -120,8 +122,9 @@ sub process {
    my $ra = $conf->{nozzle} / 2;
    print $fho "#declare mything = union {\n";
    while(<$fh>) {
-      next if(/^\s*;/);
+      #next if(/^\s*;/);
       last if(defined $conf->{complete} && $ln > $conf->{complete}*$tot_ln);
+      last if(defined $conf->{complete_layer} && $lyn > $conf->{complete_layer});
       $ln++;
       if(/^G[01] /) {
          $x = $1 - $cx if(/ X([\-\d\.]+)/);
@@ -134,8 +137,12 @@ sub process {
          if(/ E([\-\d\.]+)/) {         # -- extrusion?
             $e = $1;
             if($e > $le && $d > 0) {   # -- positive extrusion and actual X/Y motion (not just purging in-place)
-               print $fho "sphere {<$lx,$ly,$lz>,$ra}\n";
-               print $fho "cylinder{<$lx,$ly,$lz>,<$x,$y,$z>,$ra}\n" if($lx!=$x||$ly!=$y||$lz!=$z);
+               print $fho "union { sphere {<$lx,$ly,$lz>,$ra} ";
+               print $fho "cylinder{<$lx,$ly,$lz>,<$x,$y,$z>,$ra} " if($lx!=$x||$ly!=$y||$lz!=$z);
+               if(($conf->{even}||$conf->{odd})&&($lyn%2)==0) {
+                  print $fho "texture { pigment { color <$conf->{color}>*.8 } } ";
+               }
+               print $fho "}\n";
                $lxe = $x;
                $lye = $y;
                $lze = $z;
@@ -198,7 +205,6 @@ sub process {
 
                   #print("   $x,$y,$z ($i of $n)\n");
                   #print "$lx,$ly,$lz -> $x_,$y_,$z_ ($ra)\n";
-
                   print $fho "sphere {<$lx,$ly,$lz>,$ra}\n";
                   print $fho "cylinder{<$lx,$ly,$lz>,<$x,$y,$z>,$ra}\n" if($lx!=$x||$ly!=$y||$lz!=$z);
                   
@@ -228,6 +234,8 @@ sub process {
       
       } elsif(/^G92 E0/) {    # -- track reset of extrusion measurement
          $le = 0;
+      } elsif(/^;\s*LAYER:\s*(\d+)/) {
+         $lyn = $1*1;
       }
    }
    print $fho "sphere {<$lxe,$lye,$lze>,$ra}\n";
@@ -329,6 +337,8 @@ sub help() {
       --grid_size=<s>         set grid size (default: $conf->{grid_size})
       --nozzle=<d>            set nozzle diameter (default: $conf->{nozzle})
       --complete=<i>          set completeness: 0..1 or 0%..100%
+      --complete_layer=<n>    set last complete layer: 0..n
+      --even or --odd         set alternate color to distinct layers
       --timeout=<s>           set timeout of povray (default: $conf->{timeout})
       
    examples:
